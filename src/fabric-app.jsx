@@ -1,60 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { fabric } from 'fabric';
+import './App.css'
 
-const CanvasComponent = () => {
-  const canvasRef = useRef(null);
+const App = () => {
   const [imageDataURL, setImageDataURL] = useState(null);
   const [croppedDataURL, setCroppedDataURL] = useState(null);
+  const canvasRef = useRef(null);
   const imageRef = useRef(null);
   const cropRectRef = useRef(null);
   const drawingModeRef = useRef(false);
 
   useEffect(() => {
-    canvasRef.current = initCanvas();
-
-    return () => canvasRef.current.dispose();
   }, []);
-
-  const initCanvas = () => (
-    new fabric.Canvas(`canvas`, {
-      width: 800,
-      height: 600,
-    })
-  );
-
-  const addShape = (shapeType) => {
-    let shape;
-    switch (shapeType) {
-      case 'line':
-        shape = new fabric.Line([50, 50, 100, 100], { stroke: 'red' });
-        break;
-      case 'arrow':
-        shape = new fabric.Path('M 0 0 L 20 20 L 0 40 L 10 20 z');
-        break;
-      case 'rectangle':
-        shape = new fabric.Rect({ width: 60, height: 70, fill: 'green', left: 100, top: 100 });
-        break;
-      case 'text':
-        shape = new fabric.IText('Hello World', { left: 100, top: 100 });
-        break;
-      default:
-        return;
-    }
-
-    const canvas = canvasRef.current;
-    if (imageRef.current) {
-      const imagePosition = imageRef.current.getBoundingRect();
-      const offsetX = imagePosition.left;
-      const offsetY = imagePosition.top;
-      shape.set({
-        left: shape.left + offsetX,
-        top: shape.top + offsetY,
-      });
-    }
-
-    canvas.add(shape);
-    canvas.renderAll();
-  };
 
   const initializeFabricCanvas = (imageDataURL) => {
     const canvas = new fabric.Canvas(canvasRef.current, {
@@ -67,9 +24,10 @@ const CanvasComponent = () => {
     // Initialize the image if available
     if (imageDataURL) {
       fabric.Image.fromURL(imageDataURL, (img) => {
+        canvas.setWidth(img.width);
+        canvas.setHeight(img.height);
         canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
         imageRef.current = img;
-        canvas.renderAll();
       });
     }
 
@@ -119,6 +77,73 @@ const CanvasComponent = () => {
     }
   };
 
+  const addLine = () => {
+    if (canvasRef.current) {
+      const line = new fabric.Line([50, 50, 200, 200], {
+        stroke: 'blue',
+        strokeWidth: 2,
+        selectable: true,
+      });
+      canvasRef.current.add(line);
+    }
+  };
+
+  const addArrow = () => {
+    if (canvasRef.current) {
+      const arrow = new fabric.Line([50, 50, 200, 200], {
+        stroke: 'green',
+        strokeWidth: 2,
+        selectable: true,
+        hasControls: false, // Prevent resizing of arrows
+        strokeLineCap: 'round', // Add arrowhead at the end
+      });
+      canvasRef.current.add(arrow);
+    }
+  };
+
+  const addRectangle = () => {
+    if (canvasRef.current) {
+      const rect = new fabric.Rect({
+        left: 50,
+        top: 50,
+        width: 100,
+        height: 100,
+        fill: 'transparent',
+        stroke: 'purple',
+        strokeWidth: 2,
+        selectable: true,
+      });
+      canvasRef.current.add(rect);
+    }
+  };
+
+  const addText = () => {
+    if (canvasRef.current) {
+      const text = new fabric.IText('Your Text Here', {
+        left: 50,
+        top: 50,
+        fill: 'orange',
+        fontSize: 20,
+        selectable: true,
+      });
+      canvasRef.current.add(text);
+    }
+  };
+
+  const handleCropClick = () => {
+    if (imageRef.current && cropRectRef.current) {
+      const cropCoords = cropRectRef.current.getBoundingRect();
+      const croppedDataUrl = canvasRef.current.toDataURL({
+        format: 'png',
+        left: cropCoords.left,
+        top: cropCoords.top,
+        width: cropCoords.width,
+        height: cropCoords.height,
+      });
+      setCroppedDataURL(croppedDataUrl);
+    }
+  };
+
   const handleSaveClick = () => {
     if (croppedDataURL) {
       // Create a download link to save the cropped image
@@ -134,16 +159,16 @@ const CanvasComponent = () => {
       <input type="file" accept="image/*" onChange={handleImageInputChange} />
       <div>
         <h2>Tools:</h2>
-        <button onClick={() => addShape('line')}>Add Line</button>
-        <button onClick={() => addShape('arrow')}>Add Arrow</button>
-        <button onClick={() => addShape('rectangle')}>Add Rectangle</button>
-        <button onClick={() => addShape('text')}>Add Text</button>
+        <button onClick={addLine}>Add Line</button>
+        <button onClick={addArrow}>Add Arrow</button>
+        <button onClick={addRectangle}>Add Rectangle</button>
+        <button onClick={addText}>Add Text</button>
       </div>
       {imageDataURL && (
         <div>
           <h2>Original Image:</h2>
           <img src={imageDataURL} alt="Original" />
-          {/* <button onClick={handleCropClick}>Crop</button> */}
+          <button onClick={handleCropClick}>Crop</button>
         </div>
       )}
       {croppedDataURL && (
@@ -154,13 +179,10 @@ const CanvasComponent = () => {
         </div>
       )}
       <div>
-        <canvas id="canvas">
-        </canvas>
+        <canvas ref={canvasRef} />
       </div>
-      <div>
-      </div>
-    </div >
+    </div>
   );
-}
+};
 
-export default CanvasComponent;
+export default App;
